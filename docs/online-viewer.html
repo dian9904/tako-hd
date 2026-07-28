@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111111" />
+  <title>TAKO HẢI DƯƠNG · Quan sát online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><img src="assets/tako-haiduong-logo-source.png" alt="TAKO Hải Dương"></div>
+      <div><strong>TAKO HẢI DƯƠNG</strong><span>Quan sát online</span></div>
+    </div>
+    <nav id="nav">
+      <button data-view="dashboard" class="active" data-kitchen-hidden><span>⌂</span>Tổng quan</button>
+      <p data-kitchen-hidden>NHẬP LIỆU</p>
+      <button data-view="revenue" data-kitchen-hidden><span>↗</span>Doanh thu quán</button>
+      <button data-view="apps" data-kitchen-hidden><span>□</span>Tiền App phải trả <em id="app-pending-count">0</em></button>
+      <button data-view="expenses" data-kitchen-hidden><span>↘</span>Chi phí</button>
+      <button data-view="debts" data-kitchen-hidden><span>▥</span>Công nợ NCC <em id="debt-count">0</em></button>
+      <button data-view="supplier-advances" data-kitchen-hidden><span>⇥</span>Tạm ứng NCC</button>
+      <button data-view="funds" data-kitchen-hidden><span>◎</span>Sổ quỹ &amp; tài khoản</button>
+      <p data-kitchen-hidden>PHÂN TÍCH</p>
+      <button data-view="daily" data-kitchen-hidden><span>▤</span>Tổng hợp ngày</button>
+      <button data-view="pnl" data-kitchen-hidden><span>◔</span>P&amp;L Chi phí</button>
+      <p data-kitchen-hidden>CẤU HÌNH</p>
+      <button data-view="catalog" data-kitchen-hidden><span>≡</span>Danh mục</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="user-avatar" id="current-role-avatar">NV</div><div><strong id="current-role-label">Nhân viên quan sát</strong><span id="current-role-detail">Chỉ xem số liệu online</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <button class="menu-button" id="menu-button">☰</button>
+      <div><p id="eyebrow">QUAN SÁT ONLINE</p><h1 id="page-title">Tổng quan kinh doanh</h1></div>
+      <div class="top-actions">
+        <button class="access-role-button" id="access-role-button" type="button" disabled><span id="access-role-badge">Nhân viên quan sát</span><small id="access-role-caption">Online chỉ xem</small></button>
+        <button class="lock-session-button" id="lock-session-button" type="button" hidden>⌑</button>
+        <div class="report-range">
+          <label class="period-picker"><span>Chọn tháng nhanh</span><input id="period" type="month" /></label>
+          <label class="period-picker"><span>Từ ngày</span><input id="report-start" type="date" /></label>
+          <label class="period-picker"><span>Đến ngày</span><input id="report-end" type="date" /></label>
+        </div>
+        <div class="action-dropdown" id="top-action-dropdown" hidden>
+          <button class="primary-button action-menu-button" id="action-menu-button" type="button">＋ Thao tác</button>
+          <div class="action-menu" id="action-menu" role="menu">
+            <button type="button" id="export-button" role="menuitem">⇩ Xuất hồ sơ ZIP</button>
+            <button type="button" class="pdf-button" id="export-pdf-button" role="menuitem">▣ Báo cáo PDF</button>
+            <button type="button" id="quick-add" role="menuitem">＋ Nhập nhanh</button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <section id="app" class="content"></section>
+  </main>
+
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modal-close">×</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <div id="access-gate" class="access-gate" role="dialog" aria-modal="true" aria-labelledby="access-gate-title">
+    <div class="access-gate-card" id="access-gate-content"></div>
+  </div>
+
+  <script src="seed-data.js"></script>
+  <script src="online-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
