@@ -586,12 +586,16 @@ body.observer-mode [data-kitchen-section], body.observer-mode [data-kitchen-view
     display: grid;
     grid-template-columns: 102px minmax(0, 1fr);
     gap: 8px;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
     align-items: center;
     border: 0;
     border-bottom: 1px solid #eee7e4;
     padding: 7px 0;
     text-align: right !important;
-    word-break: break-word;
+    word-break: normal;
+    overflow-wrap: anywhere;
     white-space: normal !important;
     overflow: visible !important;
   }
@@ -607,7 +611,24 @@ body.observer-mode [data-kitchen-section], body.observer-mode [data-kitchen-view
   }
   .table-wrap:not(.daily-wrap) .data-table:not(.daily-table) td > * { justify-self: end; max-width: 100%; }
   .table-wrap:not(.daily-wrap) .data-table:not(.daily-table) .inline-actions { justify-content: flex-end; }
-  .expense-history-description { white-space: normal; }
+  .expense-history-table th,
+  .expense-history-table td {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+  .expense-history-table td:nth-child(2),
+  .expense-history-table td:nth-child(3),
+  .expense-history-table td:nth-child(4) {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+  .expense-history-description {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
   .daily-panel .panel-head { padding: 0 14px; }
   .daily-table { min-width: 1600px; }
   .modal-backdrop { padding: 10px; align-items: start; }

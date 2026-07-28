@@ -618,6 +618,12 @@
     && expense.operation !== "Chênh lệch thanh toán"
     && !expense.fixedAssetId
     && !expense.depreciationAssetKey;
+  const canEditExpenseDate = (expense) => Boolean(expense)
+    && !expense.payrollId
+    && expense.operation !== "Trích khấu hao"
+    && expense.operation !== "Chênh lệch thanh toán"
+    && !expense.fixedAssetId
+    && !expense.depreciationAssetKey;
   const paymentLog = (expenses = state.expenses || []) => expenses.flatMap((expense) => paymentEntries(expense).map((payment) => ({ ...payment, expense })));
   const supplierAdvances = () => state.supplierAdvances || [];
   const findSupplierAdvance = (id) => supplierAdvances().find(item => item.id === id);
@@ -2172,10 +2178,10 @@
     const rowsHtml = table(["Ngày","Mã chi","Diễn giải","Nguồn","Giá trị","Đã trả","Trạng thái","Thao tác"],rows.slice(0,120).map(x=>{
       const description = x.description || "—";
       const sourceLabel = x.operation === "Trích khấu hao" ? DEPRECIATION_SOURCE : x.source;
-      return [dateVi(x.date),`<strong title="${escapeHtml(x.code)}">${escapeHtml(x.code)}</strong>`,`<span class="expense-history-description" title="${escapeHtml(description)}"><strong>${escapeHtml(description)}</strong></span>`,escapeHtml(sourceLabel),money(x.amount),money(paidByDate(x,reportEnd())),statusPill(x),canEditExpenseCategory(x)?`<button class="small-button" data-expense-edit="${escapeHtml(x.id)}">Sửa mã</button>`:"—"];
+      return [dateVi(x.date),`<strong title="${escapeHtml(x.code)}">${escapeHtml(x.code)}</strong>`,`<span class="expense-history-description" title="${escapeHtml(description)}"><strong>${escapeHtml(description)}</strong></span>`,escapeHtml(sourceLabel),money(x.amount),money(paidByDate(x,reportEnd())),statusPill(x),canEditExpenseDate(x)?`<button class="small-button" data-expense-edit="${escapeHtml(x.id)}">Sửa</button>`:"—"];
     }),[4,5]).replace('class="data-table"', 'class="data-table expense-history-table"');
     const historyPanel = `<div class="panel"><div class="panel-head"><div><h3>Lịch sử chi phí</h3><p>${rows.length} dòng hạch toán · ${invoiceCount} chứng từ${depreciationRows.length ? ` · ${depreciationRows.length} bút toán khấu hao không tính là hóa đơn` : ""}</p></div><div class="panel-metrics"><div class="panel-metric"><span>Tổng giá trị chứng từ</span><strong>${money(totalInvoiceAmount)}</strong></div><div class="panel-metric"><span>Chi phí P&amp;L</span><strong>${money(totalPnlAmount)}</strong></div><div class="panel-metric debt"><span>Công nợ NCC</span><strong>${money(totalUnpaidAmount)}</strong></div></div></div><div class="table-wrap">${rowsHtml}</div><div class="pagination-note">Hiển thị tối đa các dòng gần nhất trong kỳ đang chọn.</div></div>`;
-    app.innerHTML=`<div class="section-grid compact-form-layout">${form}${historyPanel}</div>`;
+    app.innerHTML=`<div class="section-grid compact-form-layout expense-mobile-layout">${form}${historyPanel}</div>`;
     document.querySelectorAll("[data-expense-edit]").forEach(button=>button.addEventListener("click",()=>openExpenseCategoryEditor(button.dataset.expenseEdit)));
     const el=document.querySelector("#expense-form"), dateInput=el.querySelector('input[name="date"]'), invoiceInput=el.querySelector('input[name="invoice"]'), sourceInput=el.querySelector('#expense-source'), accountInput=el.querySelector('#expense-account'), lineContainer=el.querySelector('#expense-lines');
     const lineNodes=()=>[...lineContainer.querySelectorAll('[data-expense-line]')];
@@ -2296,27 +2302,51 @@
 
   function openExpenseCategoryEditor(id) {
     const expense = (state.expenses || []).find(item => item.id === id);
-    if (!expense || !canEditExpenseCategory(expense)) { toast("Dòng này là bút toán hệ thống, không thể đổi mã chi tại đây"); return; }
+    if (!expense || !canEditExpenseDate(expense)) { toast("Dòng này là bút toán hệ thống, không thể sửa tại đây"); return; }
+    const canChangeCode = canEditExpenseCategory(expense);
     const categories = sortCategories((state.categories || []).filter(category => !category.internalOnly && !category.payrollOnly));
-    if (!categories.length) { toast("Chưa có mã chi để lựa chọn"); return; }
-    modalContent.innerHTML = `<h2>Sửa mã chi</h2><p>Chỉ đổi cách phân loại của dòng chi này. Số tiền, mã hóa đơn, NCC và lịch sử thanh toán được giữ nguyên.</p><form id="expense-category-edit-form"><div class="form-grid"><div class="field"><label>Ngày</label><input value="${escapeHtml(dateVi(expense.date))}" readonly></div><div class="field"><label>Mã hóa đơn</label><input value="${escapeHtml(expense.invoice || "—")}" readonly></div><div class="field"><label>Nhà cung cấp</label><input value="${escapeHtml(expense.supplier || "—")}" readonly></div><div class="field full"><label>Mã chi mới</label><select name="code">${categories.map(category => `<option value="${escapeHtml(category.code)}" ${category.code === expense.code ? "selected" : ""}>${escapeHtml(category.code)} · ${escapeHtml(category.name)}</option>`).join("")}</select><small class="form-hint">Đổi mã chỉ cập nhật Nhóm P&amp;L và diễn giải. NCC vẫn là NCC trên chứng từ.</small></div></div><div class="calc-box"><span>Giá trị dòng giữ nguyên</span><strong>${money(expense.amount)}</strong></div><div class="calc-box"><span>Đã thanh toán / còn lại</span><strong>${money(paidAmount(expense))} / ${money(expenseOutstanding(expense))}</strong></div><div class="form-actions"><button class="primary-button">Lưu mã chi mới</button></div></form>`;
+    if (canChangeCode && !categories.length) { toast("Chưa có mã chi để lựa chọn"); return; }
+    const relatedExpenses = (state.expenses || []).filter(item => {
+      if (expense.invoiceGroupId && item.invoiceGroupId === expense.invoiceGroupId) return true;
+      return expense.invoice && item.invoice === expense.invoice;
+    });
+    const editablePayments = relatedExpenses.flatMap(item => paymentEntries(item).map(payment => ({ item, payment })));
+    const firstPaymentDate = editablePayments[0]?.payment?.date || expense.date || localToday();
+    const codeField = canChangeCode
+      ? `<div class="field full"><label>Mã chi mới</label><select name="code">${categories.map(category => `<option value="${escapeHtml(category.code)}" ${category.code === expense.code ? "selected" : ""}>${escapeHtml(category.code)} · ${escapeHtml(category.name)}</option>`).join("")}</select><small class="form-hint">Ngày chứng từ áp dụng cho ${relatedExpenses.length} dòng cùng hóa đơn. Mã chi chỉ đổi cho dòng đang chọn.</small></div>`
+      : `<div class="field full"><label>Mã chi</label><input name="code" value="${escapeHtml(expense.code || "—")}" readonly><small class="form-hint">Dòng CAPEX/tạm ứng chỉ sửa ngày; mã chi được khóa để không sai loại tài sản hoặc bút toán.</small></div>`;
+    modalContent.innerHTML = `<h2>Sửa khoản chi</h2><p>Sửa ngày khi nhập sai. Số tiền, mã hóa đơn, NCC và mã giao dịch vẫn giữ nguyên.</p><form id="expense-category-edit-form"><div class="form-grid"><div class="field"><label>Ngày chứng từ / hạch toán</label><input name="date" type="date" value="${escapeHtml(expense.date || localToday())}"></div><div class="field"><label>Ngày thanh toán / cấn trừ</label><input name="paymentDate" type="date" value="${escapeHtml(firstPaymentDate)}" ${editablePayments.length ? "" : "disabled"}></div><div class="field"><label>Mã hóa đơn</label><input value="${escapeHtml(expense.invoice || "—")}" readonly></div><div class="field"><label>Nhà cung cấp</label><input value="${escapeHtml(expense.supplier || "—")}" readonly></div>${codeField}</div><div class="calc-box"><span>Giá trị dòng giữ nguyên</span><strong>${money(expense.amount)}</strong></div><div class="calc-box"><span>Đã thanh toán / còn lại</span><strong>${money(paidAmount(expense))} / ${money(expenseOutstanding(expense))}</strong></div><div class="form-actions"><button class="primary-button">Lưu thay đổi</button></div></form>`;
     openModal();
     document.querySelector("#expense-category-edit-form").addEventListener("submit", event => {
       event.preventDefault();
-      const code = String(new FormData(event.currentTarget).get("code") || "").trim().toUpperCase();
-      const category = categories.find(item => item.code === code);
-      if (!category) { toast("Mã chi không hợp lệ"); return; }
-      const pnlGroupCode = category.pnlGroupCode || pnlGroupCodeFromValue(category.group);
-      const isCapitalAsset = pnlGroupCode === "DEP";
-      Object.assign(expense, {
-        code: category.code,
-        group: category.group,
-        pnlGroupCode,
-        description: category.name,
-        operation: isCapitalAsset ? "Đầu tư tài sản (CAPEX)" : expense.operation,
-        pnl: isCapitalAsset ? false : category.pnl,
+      const fd = new FormData(event.currentTarget);
+      const code = String(fd.get("code") || "").trim().toUpperCase();
+      const newDate = String(fd.get("date") || "").trim();
+      const newPaymentDate = String(fd.get("paymentDate") || "").trim();
+      const category = canChangeCode ? categories.find(item => item.code === code) : null;
+      if (canChangeCode && !category) { toast("Mã chi không hợp lệ"); return; }
+      if (!newDate) { toast("Vui lòng chọn ngày chứng từ"); return; }
+      relatedExpenses.forEach(item => {
+        item.date = newDate;
       });
-      persist(); closeModal(); toast("Đã cập nhật mã chi và Nhóm P&L; nhà cung cấp giữ nguyên theo chứng từ"); render({ preserveScroll: true });
+      if (newPaymentDate && editablePayments.length) {
+        editablePayments.forEach(({ payment }) => {
+          payment.date = newPaymentDate;
+        });
+      }
+      if (canChangeCode) {
+        const pnlGroupCode = category.pnlGroupCode || pnlGroupCodeFromValue(category.group);
+        const isCapitalAsset = pnlGroupCode === "DEP";
+        Object.assign(expense, {
+          code: category.code,
+          group: category.group,
+          pnlGroupCode,
+          description: category.name,
+          operation: isCapitalAsset ? "Đầu tư tài sản (CAPEX)" : expense.operation,
+          pnl: isCapitalAsset ? false : category.pnl,
+        });
+      }
+      persist(); closeModal(); toast(canChangeCode ? "Đã cập nhật ngày và mã chi; nhà cung cấp giữ nguyên theo chứng từ" : "Đã cập nhật ngày chứng từ và ngày thanh toán/cấn trừ"); render({ preserveScroll: true });
     });
   }
 
